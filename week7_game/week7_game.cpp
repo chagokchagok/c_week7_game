@@ -1,9 +1,8 @@
 ﻿#define _CRT_SECURE_NO_WARNINGS
 #include <bangtal.h>
 #include <stdio.h>
-SceneID scene_Start, scene_Cave, scene_Upgrade, scene_Armor, scene_Avengers_Facility, scene_Avengers_Recruit;
-//push test
-ObjectID icon_Start, icon_Support, icon_Upgrade, icon_Back, icon_Avengers_Facility, icon_Recruit, icon_Test, icon_Boss_Stage;
+SceneID scene_Start, scene_Cave, scene_Upgrade, scene_Armor, scene_Avengers_Facility, scene_Avengers_Recruit, scene_Villain;
+ObjectID icon_Start, icon_Support, icon_Upgrade, icon_Back, icon_Avengers_Facility, icon_Recruit, icon_Test, icon_Boss_Stage, icon_Attack;
 ObjectID icon_Upgrade_Suit[8], icon_Anvil[8], ironman_Suit, avengers[16], icon_Avengers[16], icon_Avengers_Block[16];
 
 int scene_Upgrade_Y[8] = { 450, 350, 250, 150 };
@@ -14,17 +13,69 @@ int icon_Avengers_Y[4] = { 405, 315, 225, 135 };
 int icon_Avengers_Block_X[4] = {53, 353,653, 953};
 int icon_Avengers_Block_Y[4] = {396, 306, 216, 126};
 bool avengers_Status[16] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
-bool avengers_Possible[16] = { 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0};
+bool avengers_Possible[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+int avengers_Damage[16] = { 20, 20, 50, 50, 50, 100, 100, 1000, 1000, 10000, 5000, 5000, 20000, 2000, 30000, 40000 };
+int villain_Damage[12] = { 5, 10, 40, 100, 150, 400, 500, 2500, 4500, 10000, 50000, 150000 };
 
 int upgrade_Status = 0;
 int support_Status = 0;
-int money_Status = 0;
+int damage_Status = 150000;
 int boss_Status = 0;
-int i = 0;
+int attack_Count = 0;
+int boss_Hp = 0;
+
 char icon_Upgrade_Image[20];
-char ironman_Suit_Image[100];
-char avengers_Image[100];
-char icon_Boss[100];
+char ironman_Suit_Image[345];
+char avengers_Image[81];
+char icon_Boss[103];
+char scene_Boss_Battle[34];
+
+void avengersPossible(int i) {
+    if(!avengers_Status[i])
+        if (i == 0 || i == 1) {
+            avengers_Possible[i] = 1;
+        }
+        else if (i == 2) {
+            if (boss_Status >= 5) { avengers_Possible[i] = 1; }
+        }
+        else if (i == 3) {
+            if (boss_Status >= 3) { avengers_Possible[i] = 1; }
+        }
+        else if (i == 4) {
+            if (boss_Status >= 5) { avengers_Possible[i] = 1; }
+        }
+        else if (i == 5) {
+            if (upgrade_Status >= 3) { avengers_Possible[i] = 1; }
+        }
+        else if (i == 6) {
+            if (avengers_Status[2]) { avengers_Possible[i] = 1; }
+        }
+        else if (i == 7) {
+            if (boss_Status >= 7) { avengers_Possible[i] = 1; }
+        }
+        else if (i == 8) {
+            if (avengers_Status[4] && upgrade_Status >= 6) { avengers_Possible[i] = 1; }
+        }
+        else if (i == 9) {
+            if (boss_Status >= 10) { avengers_Possible[i] = 1; }
+        }
+        else if (i == 10) {
+            if (boss_Status >= 9) { avengers_Possible[i] = 1; }
+        }
+        else if (i == 11) {
+            if (avengers_Status[9]) { avengers_Possible[i] = 1; }
+        }
+        else if (i == 12) {
+            if (boss_Status >= 10) { avengers_Possible[i] = 1; }
+        }
+        else if (i == 13) {
+            if (boss_Status >= 8) { avengers_Possible[i] = 1; }
+        }
+        else if (i == 14 || i == 15) {
+            if (boss_Status >= 11) { avengers_Possible[i] = 1; }
+        }
+}
 
 void recruitScene() {
     for (int i = 0; i < 16; i++) {
@@ -34,6 +85,7 @@ void recruitScene() {
     enterScene(scene_Avengers_Recruit);
 
     for (int i = 0; i < 16; i++) {
+        avengersPossible(i);
         if (avengers_Possible[i]) {
             icon_Avengers[i] = createObject("Images\\icon_Avengers.png");
         }
@@ -106,12 +158,24 @@ void upgradeScene() {
 }
 
 void battleScene() {
-    scene_Start = createScene("Room1", "Images\\scene_Start.png");
-    scene_Cave = createScene("Room1", "Images\\scene_Cave.png");
+    hideObject(ironman_Suit);
+    boss_Hp = villain_Damage[boss_Status] * 3;
+    sprintf(scene_Boss_Battle, "Images\\villain_Background\\scene_Villain_%d.png", boss_Status);
+    scene_Villain = createScene("r", scene_Boss_Battle);
+    enterScene(scene_Villain);
+
+    icon_Attack = createObject("Images\\icon_Attack.png");
+    locateObject(icon_Attack, scene_Villain, 480, 0);
+    showObject(icon_Attack);
+
+    locateObject(ironman_Suit, scene_Villain, 100, 100);
+    showObject(ironman_Suit);
+
 }
 
 void mainScene() {
     hideObject(ironman_Suit);
+    hideObject(icon_Boss_Stage);
 
     if (upgrade_Status < 2) {
         enterScene(scene_Cave);
@@ -128,19 +192,15 @@ void mainScene() {
     }
     showObject(ironman_Suit);
     ////////////////////////////////////////sceneCave/scene_Armor 구분 함수 만들면 깔끔
-    for (int i = 0; i < 11; i++) {
-        if (i == boss_Status) {
-            sprintf(icon_Boss, "Images\\villain\\icon_Villain_%d.png", boss_Status);
-            icon_Boss_Stage = createObject(icon_Boss);
-            if (upgrade_Status < 2) {
-                locateObject(icon_Boss_Stage, scene_Cave, 900, 300);
-            }
-            else if (upgrade_Status < 9) {
-                locateObject(icon_Boss_Stage, scene_Armor, 900, 300);
-            }
-            showObject(icon_Boss_Stage);
-        }
+    sprintf(icon_Boss, "Images\\villain\\icon_Villain_%d.png", boss_Status);
+    icon_Boss_Stage = createObject(icon_Boss);
+    if (upgrade_Status < 2) {
+        locateObject(icon_Boss_Stage, scene_Cave, 900, 300);
     }
+    else if (upgrade_Status < 9) {
+        locateObject(icon_Boss_Stage, scene_Armor, 900, 300);
+    }
+    showObject(icon_Boss_Stage);
 
 
     icon_Support = createObject("Images\\icon_Support.png");
@@ -190,9 +250,28 @@ void mouseCallback(ObjectID object, int x, int y, MouseAction action) {
         }
     }
     for (int i = 0; i < 16; i++) {
-        if (object == icon_Avengers[i] && avengers_Possible[i]) {
-            avengers_Status[i] = 1;
-            recruitScene();
+        if (object == icon_Avengers[i]) {
+            avengersPossible(i);
+            if (avengers_Possible[i]) {
+                avengers_Status[i] = 1;
+                avengers_Possible[i] = 0;
+                damage_Status = damage_Status + avengers_Damage[i];
+                printf("%d", damage_Status);
+                recruitScene();
+            }
+        }
+    }
+    if (object == icon_Attack) {
+        boss_Hp = boss_Hp - damage_Status;
+        attack_Count++;
+        printf("%d %d %d \n", boss_Hp, attack_Count, boss_Status);
+        if (boss_Hp < 1) {
+            boss_Status++;
+            mainScene();
+            attack_Count = 0;
+        } else if (attack_Count == 3) {
+            mainScene();
+            attack_Count = 0;
         }
     }
 

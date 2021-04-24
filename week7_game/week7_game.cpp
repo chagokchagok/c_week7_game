@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
-SceneID scene_Start, scene_Cave, scene_Upgrade, scene_Armor, scene_Avengers_Facility, scene_Avengers_Recruit, scene_Villain;
-ObjectID icon_Start, icon_Support, icon_Upgrade, icon_Back, icon_Avengers_Facility, icon_Recruit, icon_Test, icon_Boss_Stage, icon_Attack;
+SceneID scene_Start, scene_Cave, scene_Upgrade, scene_Armor, scene_Avengers_Facility, scene_Avengers_Recruit, scene_Villain, scene_End;
+ObjectID icon_Start, icon_Support, icon_Upgrade, icon_Back, icon_Avengers_Facility, icon_Recruit, icon_Test, icon_Boss_Stage, icon_Attack, icon_Success, icon_Fail, icon_End, icon_Condition, avengers_Condition;
 ObjectID icon_Upgrade_Suit[8], icon_Anvil[8], ironman_Suit, avengers[16], icon_Avengers[16], icon_Avengers_Block[16], tip[10];
 
 int scene_Upgrade_Y[8] = { 450, 350, 250, 150 };
@@ -15,17 +15,16 @@ int icon_Avengers_X[4] = {275,575,875,1175};
 int icon_Avengers_Y[4] = { 405, 315, 225, 135 };
 int icon_Avengers_Block_X[4] = {53, 353,653, 953};
 int icon_Avengers_Block_Y[4] = {396, 306, 216, 126};
-int upgrade_Member[8] = { 0, 0, 1, 3, 7, 10, 13, 16 };
+int upgrade_Member[8] = { 0, 0, 1, 3, 7, 8, 13, 16 };
 bool avengers_Status[16] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
 bool avengers_Possible[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 bool upgrade_Possible[8] = { 1,1,0,0,0,0,0,0 };
 double damage_Multiple[9] = {1.0, 1.0, 1.1, 1.2, 1.3, 1.5, 1.7, 2, 3 };
 
-int avengers_Damage[16] = { 20, 20, 50, 50, 50, 100, 100, 1000, 1000, 10000, 5000, 5000, 20000, 2000, 30000, 40000 };
+int avengers_Damage[16] = { 20, 20, 50, 50, 50, 100, 100, 1000, 1000, 10000, 5000, 5000, 20000, 2000, 30000, 100000 };
 int villain_Damage[12] = { 5, 10, 40, 100, 150, 400, 500, 2500, 4500, 10000, 50000, 150000 };
 
 int upgrade_Status = 0;
-int support_Status = 0;
 int damage_Status = 10;
 int boss_Status = 0;
 int attack_Count = 0;
@@ -101,6 +100,7 @@ void recruitScene() {
         hideObject(icon_Avengers[i]);
     }
     enterScene(scene_Avengers_Recruit);
+    hideObject(avengers_Condition);
 
     for (int i = 0; i < 16; i++) {
         avengersPossible(i);
@@ -120,15 +120,18 @@ void recruitScene() {
     }
 
     if (tip_Count == 7) {
-        locateObject(tip[7], scene_Avengers_Recruit, 100, 500);
+        locateObject(tip[7], scene_Avengers_Recruit, 100, 400);
         showObject(tip[7]);
 
     }
     else if (tip_Count == 8) {
-        locateObject(tip[8], scene_Avengers_Recruit, 500, 500);
+        locateObject(tip[8], scene_Avengers_Recruit, 500, 400);
         showObject(tip[8]);
 
     }
+    icon_Condition = createObject("Images\\icon_Condition.png");
+    locateObject(icon_Condition, scene_Avengers_Recruit, 1000, 600);
+    showObject(icon_Condition);
 
     icon_Back = createObject("Images\\icon_Back.png");
     locateObject(icon_Back, scene_Avengers_Recruit, 0, 0);
@@ -166,7 +169,12 @@ void upgradeScene() {
         sprintf(icon_Upgrade_Image, "Images\\icon_Upgrade\\icon_Upgrade_%d.png", i);
         icon_Upgrade_Suit[i] = createObject(icon_Upgrade_Image);
         if (i < upgrade_Status + 1 && avengers_Member >= upgrade_Member[i]) {
-            icon_Anvil[i] = createObject("Images\\icon_Anvil.png");
+            if (i == 1 && tip_Count == 3) {
+                icon_Anvil[1] = createObject("Images\\icon_Anvil_2.png");
+            }
+            else {
+                icon_Anvil[i] = createObject("Images\\icon_Anvil.png");
+            }
         }
         else {
             icon_Anvil[i] = createObject("Images\\icon_Anvil_2.png");
@@ -227,8 +235,9 @@ void battleScene() {
 void mainScene() {
     hideObject(ironman_Suit);
     hideObject(icon_Boss_Stage);
-
-    if (upgrade_Status < 2) {
+    if (boss_Status == 12) {
+        enterScene(scene_End);
+    } else if (upgrade_Status < 2) {
         enterScene(scene_Cave);
     } else if (upgrade_Status < 9) {
         enterScene(scene_Armor);
@@ -283,7 +292,7 @@ void mainScene() {
 
     }
     else if (tip_Count == 9) {
-        locateObject(tip[9], scene_Armor, 100, 500);
+        locateObject(tip[9], scene_Armor, 100, 400);
         showObject(tip[9]);
 
     }
@@ -293,27 +302,31 @@ void mouseCallback(ObjectID object, int x, int y, MouseAction action) {
 	if (object == icon_Start) {
         mainScene();
 	}
-    if (object == icon_Upgrade && tip_Count >= 1) {
-        printf("%d", tip_Count);
+    if (object == icon_Upgrade && tip_Count >= 1 && tip_Count != 3 && tip_Count != 8) {
         upgradeScene();
     }
     if (object == icon_Back) {
         mainScene();
-    }
+    }   
     if (object == icon_Avengers_Facility && tip_Count >= 10) {
         avengersFacilityScene();
     }
-    if (object == icon_Recruit && tip_Count >= 7) {
+    if (object == icon_Recruit && tip_Count >= 7 && tip_Count != 8) {
         recruitScene();
     }
-    if (object == icon_Boss_Stage && tip_Count >= 4) {
+    if (object == icon_Boss_Stage && tip_Count >= 4 && tip_Count != 8) {
         battleScene();
     }
     for (int i = 0; i < 8; i++) {
-        if (object == icon_Anvil[i] && i == upgrade_Status && tip_Count >= 3) {
-            upgrade_Status = i + 1;
-            upgradeScene();
-            printf("%d", upgrade_Status);
+        if (object == icon_Anvil[i] && i == upgrade_Status && tip_Count >= 3 && avengers_Member >= upgrade_Member[i]) {
+            if (i == 1 && tip_Count == 3) {
+                continue;
+            }
+            else {
+                upgrade_Status = i + 1;
+                upgradeScene();
+                printf("%d", upgrade_Status);
+            }
         }
     }
     for (int i = 0; i < 16; i++) {
@@ -329,17 +342,21 @@ void mouseCallback(ObjectID object, int x, int y, MouseAction action) {
             }
         }
     }
-    if (object == icon_Attack && tip_Count >= 6) { 
+    if (object == icon_Attack && tip_Count >= 6 && attack_Count != 3) { 
         boss_Hp = boss_Hp - damage_Calculate();
         attack_Count++;
         printf("%d %d %d \n", boss_Hp, attack_Count, boss_Status);  
         if (boss_Hp < 1) {
             boss_Status++;
-            mainScene();
-            attack_Count = 0;
+            icon_Success = createObject("Images\\icon_Success.png");
+            locateObject(icon_Success, scene_Villain, 300, 200);
+            showObject(icon_Success);
+
         } else if (attack_Count == 3) {
-            mainScene();
-            attack_Count = 0;
+            icon_Fail = createObject("Images\\icon_Fail.png");
+            locateObject(icon_Fail, scene_Villain, 300, 200);
+            showObject(icon_Fail);
+
         }
     }
     for (int i = 0; i < 10; i++) {
@@ -356,6 +373,20 @@ void mouseCallback(ObjectID object, int x, int y, MouseAction action) {
             }
         } 
     }
+    if (object == icon_Success || object == icon_Fail) {
+        hideObject(icon_Success);
+        hideObject(icon_Fail);
+        attack_Count = 0;
+        mainScene();
+    }
+    if (object == icon_Condition) {
+        avengers_Condition = createObject("Images\\avengers_Condition.png");
+        locateObject(avengers_Condition, scene_Avengers_Recruit, 160, 90);
+        showObject(avengers_Condition);
+    }
+    if (object == avengers_Condition) {
+        hideObject(avengers_Condition);
+    }
 }
 
 int main()
@@ -364,12 +395,13 @@ int main()
 
     srand(time(NULL));
 
-    scene_Start = createScene("Room1", "Images\\scene_Start.png");  
-    scene_Cave = createScene("Room1", "Images\\scene_Cave.png");
-    scene_Armor = createScene("r", "Images\\scene_Armor.png");
-    scene_Upgrade = createScene("r", "Images\\scene_Upgrade.png");
-    scene_Avengers_Recruit = createScene("s", "Images\\scene_Avengers_Recruit.png");
-    scene_Avengers_Facility = createScene("a", "Images\\scene_Avengers_Facility.png");
+    scene_Start = createScene("", "Images\\scene_Start.png");  
+    scene_Cave = createScene("", "Images\\scene_Cave.png");
+    scene_Armor = createScene("", "Images\\scene_Armor.png");
+    scene_Upgrade = createScene("", "Images\\scene_Upgrade.png");
+    scene_End = createScene("", "Images\\scene_End.png");
+    scene_Avengers_Recruit = createScene("", "Images\\scene_Avengers_Recruit.png");
+    scene_Avengers_Facility = createScene("", "Images\\scene_Avengers_Facility.png");
 
     for (int i = 0; i < 10; i++) {
         sprintf(tip_Image, "Images\\tip\\tip_%d.png", i);
